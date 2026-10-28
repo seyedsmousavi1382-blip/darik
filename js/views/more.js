@@ -2,7 +2,7 @@
 import { state, setPrice } from '../store.js';
 import { icon } from '../icons.js';
 import { toman, jDate, hm, fa, toEnDigits, rialsFromToman } from '../money.js';
-import { refreshPrice } from '../price.js';
+import { refreshPrice, diagnose, sourceName } from '../price.js';
 import { makeBackup, restoreFromFile } from '../backup.js';
 import { openSheet, closeSheet, toast, $$ } from '../ui.js';
 
@@ -43,17 +43,29 @@ export function openPrice() {
     <div class="sheet-title">${icon('coin', 22)} قیمت تتر</div>
     <div class="glow-card" style="text-align:center;margin-bottom:14px">
       <div class="big num" style="font-size:38px">${state.rate ? toman(state.rate) : '—'}</div>
-      <div class="muted">تومان · ${state.priceAt ? `${state.priceSource === 'nobitex' ? 'نوبیتکس' : 'دستی'}، ${jDate(state.priceAt, { year: false })} ساعت ${hm(state.priceAt)}` : 'هنوز قیمتی گرفته نشده'}</div>
+      <div class="muted">تومان · ${state.priceAt ? `${sourceName(state.priceSource)}، ${jDate(state.priceAt, { year: false })} ساعت ${hm(state.priceAt)}` : 'هنوز قیمتی گرفته نشده'}</div>
     </div>
-    <button class="btn btn-primary btn-block" id="fetch">${icon('refresh', 18)} گرفتن قیمت از نوبیتکس</button>
+    <button class="btn btn-primary btn-block" id="fetch">${icon('refresh', 18)} گرفتن قیمت آنلاین</button>
     <div class="field" style="margin-top:18px"><label for="manual">یا قیمت رو دستی وارد کن (تومان)</label>
       <div class="row"><input class="input num" id="manual" inputmode="numeric" placeholder="مثلاً ۱۰۲۰۰۰" style="flex:1"><button class="btn btn-ghost" id="set">ذخیره</button></div></div>
+    <button class="btn btn-ghost btn-block btn-sm" id="diag" style="margin-top:6px">${icon('adjustments-horizontal', 16)} عیب‌یابی منابع قیمت</button>
+    <div id="diagout"></div>
   `, (sheet) => {
     sheet.querySelector('#fetch').onclick = async (e) => {
       const b = e.currentTarget; b.style.opacity = .6; b.innerHTML = icon('refresh', 18) + ' در حال گرفتن…';
       const r = await refreshPrice({ force: true });
-      if (r.ok) { closeSheet(); toast('قیمت: ' + toman(state.rate) + ' تومان', { ok: true }); }
-      else { b.style.opacity = 1; b.innerHTML = icon('refresh', 18) + ' دوباره امتحان کن'; toast('قیمت گرفته نشد. اینترنت یا فیلترشکن رو چک کن.'); }
+      if (r.ok) { closeSheet(); toast(`قیمت از ${sourceName(r.source)}: ${toman(state.rate)} تومان`, { ok: true }); }
+      else { b.style.opacity = 1; b.innerHTML = icon('refresh', 18) + ' دوباره امتحان کن'; toast('از هیچ منبعی قیمت نیومد. عیب‌یابی رو بزن.'); }
+    };
+    sheet.querySelector('#diag').onclick = async (e) => {
+      const b = e.currentTarget, out = sheet.querySelector('#diagout');
+      b.innerHTML = icon('refresh', 16) + ' در حال امتحان همه‌ی منابع…';
+      const d = await diagnose();
+      b.innerHTML = icon('adjustments-horizontal', 16) + ' دوباره عیب‌یابی کن';
+      out.innerHTML = `<div class="card" style="margin-top:10px">
+        <div class="stat-row"><span class="muted">اینترنت گوشی</span><span class="${d.online ? 'green' : 'red'}">${d.online ? 'وصله' : 'قطعه'}</span></div>
+        ${d.results.map((r) => `<div class="stat-row"><span>${r.src.name}</span><span class="${r.ok ? 'green' : 'red'}" style="font-size:12.5px;text-align:left">${r.ok ? toman(r.rial) + ' تومان' : r.why}</span></div>`).join('')}
+      </div><div class="help">یه بار با فیلترشکن روشن و یه بار خاموش امتحان کن و نتیجه رو مقایسه کن.</div>`;
     };
     sheet.querySelector('#set').onclick = async () => {
       const n = Number(toEnDigits(sheet.querySelector('#manual').value).replace(/[^\d]/g, ''));

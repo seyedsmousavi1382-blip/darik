@@ -1,6 +1,6 @@
 // Service Worker: فایل‌های اپ را روی گوشی نگه می‌دارد تا بدون اینترنت هم باز شود.
 // هر بار که فایلی از اپ عوض شد، عدد VERSION را یکی بالا ببر تا گوشی نسخه‌ی جدید را بگیرد.
-const VERSION = 'darik-v2';
+const VERSION = 'darik-v3';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/app.js', 'js/store.js', 'js/ui.js', 'js/db.js', 'js/jalali.js', 'js/money.js', 'js/ledger.js', 'js/seed.js',
